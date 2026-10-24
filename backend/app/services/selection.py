@@ -53,4 +53,15 @@ def latest_forecasts(forecasts: pd.DataFrame, start: date, end: date, cutoff: ti
 
 
 def _empty() -> pd.DataFrame:
-    return pd.DataFrame(columns=["start_time", "publish_time", "forecast", "horizon_h", "delivery_day", "cutoff_time"])
+    # Typed columns so downstream merges on start_time work when nothing matches.
+    utc = pd.DatetimeTZDtype(tz="UTC")
+    return pd.DataFrame(
+        {
+            "start_time": pd.Series(dtype=utc),
+            "publish_time": pd.Series(dtype=utc),
+            "forecast": pd.Series(dtype=float),
+            "horizon_h": pd.Series(dtype=float),
+            "delivery_day": pd.Series(dtype=object),
+            "cutoff_time": pd.Series(dtype=utc),
+        }
+    )

@@ -1,0 +1,19 @@
+{
+  "start": "2026-01-01",
+  "end": "2026-01-31",
+  "actual_rows": 1488,
+  "forecast_rows": 15215,
+  "actuals_removed": {
+    "non_wind": 0,
+    "missing_value": 0,
+    "implausible": 0,
+    "duplicates": 0
+  },
+  "forecasts_removed": {
+    "missing_value": 0,
+    "implausible": 0,
+    "negative_horizon": 3817,
+    "duplicates": 0
+  },
+  "missing_half_hours": []
+}

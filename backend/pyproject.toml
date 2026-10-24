@@ -5,7 +5,9 @@ requires-python = ">=3.12"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = [".", "scripts"]
+addopts = "--import-mode=importlib -m 'not integration'"
+markers = ["integration: hits the live Elexon API; run with `pytest -m integration`"]
 
 [tool.ruff]
 line-length = 140
