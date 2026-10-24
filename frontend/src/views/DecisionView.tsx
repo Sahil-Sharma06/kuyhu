@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { DecisionDay } from '../api'
-import { ChartCard, EmptyState, ErrorBox, Legend, Loading, StatCard, TooltipBox } from '../components/ui'
+import { ChartCard, DataTable, EmptyState, ErrorBox, Legend, Loading, StatCard, TooltipBox } from '../components/ui'
 import { fmtClock, fmtDateTime, fmtGW, fmtMW, fmtSigned } from '../format'
 import { useApi, useChartColors } from '../hooks'
 import { mergeSeries } from '../series'
@@ -101,6 +101,12 @@ export function DecisionView({ day, cutoff }: { day: string; cutoff: string }) {
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
+            <DataTable
+              name="Hourly forecast, lower bound and actual"
+              toggle="Show hourly table"
+              headers={['Time (London)', 'Forecast', 'Lower bound', 'Actual']}
+              rows={rows.map((r) => [fmtClock(r.t), fmtMW(r.forecast), fmtMW(r.lower), fmtMW(r.actual)])}
+            />
           </>
         )}
       </ChartCard>

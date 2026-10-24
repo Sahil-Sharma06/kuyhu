@@ -56,7 +56,7 @@ export default function App() {
                 key={id}
                 onClick={() => setTab(id)}
                 aria-current={tab === id ? 'page' : undefined}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors motion-reduce:transition-none ${
                   tab === id ? 'bg-ink text-surface' : 'text-ink-2 hover:text-ink'
                 }`}
               >

@@ -1,14 +1,26 @@
 import type { ReactNode } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { GroupStat, HorizonStat, Metrics } from '../api'
-import { ChartCard, ErrorBox, Legend, Loading, StatCard, TooltipBox } from '../components/ui'
+import { ChartCard, DataTable, ErrorBox, Legend, Loading, StatCard, TooltipBox } from '../components/ui'
 import { fmtDay, fmtGW, fmtMW, fmtPct, fmtSigned } from '../format'
 import { useApi, useChartColors, type ChartColors } from '../hooks'
 
 const axisProps = (c: ChartColors) => ({ stroke: c['--axis'], tick: { fill: c['--muted'], fontSize: 12 } })
 
 /** MAE bars with a bias line, sharing one MW axis. */
-function MaeBiasChart({ rows, label, c, xLabel }: { rows: GroupStat[]; label: (k: GroupStat) => string; c: ChartColors; xLabel: string }) {
+function MaeBiasChart({
+  rows,
+  label,
+  c,
+  xLabel,
+  tableName,
+}: {
+  rows: GroupStat[]
+  label: (k: GroupStat) => string
+  c: ChartColors
+  xLabel: string
+  tableName: string
+}) {
   const data = rows.map((r) => ({ ...r, name: label(r) }))
   return (
     <>
@@ -46,6 +58,12 @@ function MaeBiasChart({ rows, label, c, xLabel }: { rows: GroupStat[]; label: (k
           </ComposedChart>
         </ResponsiveContainer>
       </div>
+      <DataTable
+        name={tableName}
+        toggle="Show table"
+        headers={[xLabel, 'MAE', 'Bias', 'P90 |error|', 'Points']}
+        rows={data.map((r) => [r.name, fmtMW(r.mae), fmtSigned(r.bias), fmtMW(r.p90), String(r.n)])}
+      />
     </>
   )
 }
@@ -53,6 +71,7 @@ function MaeBiasChart({ rows, label, c, xLabel }: { rows: GroupStat[]; label: (k
 function Histogram({ bins, c }: { bins: Metrics['histogram']; c: ChartColors }) {
   const data = bins.map((b) => ({ ...b, mid: b.bin + 250 }))
   return (
+    <>
     <div className="h-64" role="img" aria-label="Histogram of forecast error">
       <ResponsiveContainer>
         <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap={2}>
@@ -78,6 +97,13 @@ function Histogram({ bins, c }: { bins: Metrics['histogram']; c: ChartColors }) 
         </BarChart>
       </ResponsiveContainer>
     </div>
+    <DataTable
+      name="Error distribution"
+      toggle="Show table"
+      headers={['Error bin', 'Hours']}
+      rows={data.map((d) => [`${fmtSigned(d.bin)} to ${fmtSigned(d.bin + 500)}`, String(d.count)])}
+    />
+    </>
   )
 }
 
@@ -117,33 +143,12 @@ function DailyTrend({ rows, c }: { rows: Metrics['by_day']; c: ChartColors }) {
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <details className="mt-3 text-xs text-ink-2">
-        <summary className="cursor-pointer select-none">Show daily table</summary>
-        <div className="mt-2 max-h-64 overflow-auto">
-          <table className="w-full tabular-nums">
-            <thead className="text-left text-muted">
-              <tr>
-                <th className="py-1 pr-2">Day</th>
-                <th className="pr-2 text-right">Forecast</th>
-                <th className="pr-2 text-right">Actual</th>
-                <th className="pr-2 text-right">Bias</th>
-                <th className="text-right">MAE</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((r) => (
-                <tr key={r.key} className="border-t border-line">
-                  <td className="py-1 pr-2">{r.name}</td>
-                  <td className="pr-2 text-right">{fmtMW(r.mean_forecast)}</td>
-                  <td className="pr-2 text-right">{fmtMW(r.mean_actual)}</td>
-                  <td className="pr-2 text-right">{fmtSigned(r.bias)}</td>
-                  <td className="text-right">{fmtMW(r.mae)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
+      <DataTable
+        name="Daily trend"
+        toggle="Show daily table"
+        headers={['Day', 'Forecast', 'Actual', 'Bias', 'MAE']}
+        rows={data.map((r) => [r.name, fmtMW(r.mean_forecast), fmtMW(r.mean_actual), fmtSigned(r.bias), fmtMW(r.mae)])}
+      />
     </>
   )
 }
@@ -189,12 +194,12 @@ export function AccuracyView({ start, end, cutoff }: { start: string; end: strin
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard title="Error by forecast horizon" subtitle="All forecast vintages for these target days, 6-hour lead-time buckets (independent of cutoff).">
           <Section loading={horizon.loading} error={horizon.error}>
-            {() => <MaeBiasChart rows={horizon.data!} label={(r) => (r as HorizonStat).label} c={c} xLabel="Horizon" />}
+            {() => <MaeBiasChart rows={horizon.data!} label={(r) => (r as HorizonStat).label} c={c} xLabel="Horizon" tableName="Error by forecast horizon" />}
           </Section>
         </ChartCard>
         <ChartCard title="Error by hour of day" subtitle="Latest pre-cutoff forecast, by Europe/London hour of the target time.">
           <Section loading={hour.loading} error={hour.error}>
-            {() => <MaeBiasChart rows={hour.data!} label={(r) => `${String(r.key).padStart(2, '0')}:00`} c={c} xLabel="Hour" />}
+            {() => <MaeBiasChart rows={hour.data!} label={(r) => `${String(r.key).padStart(2, '0')}:00`} c={c} xLabel="Hour" tableName="Error by hour of day" />}
           </Section>
         </ChartCard>
         <ChartCard title="Error distribution" subtitle="Forecast − actual in 500 MW bins. Blue = over-forecast (risk of buying too little); orange = under-forecast.">

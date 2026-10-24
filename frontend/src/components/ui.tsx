@@ -40,6 +40,39 @@ export function ErrorBox({ message }: { message: string }) {
   )
 }
 
+/** Collapsible data table: the text alternative for a chart. */
+export function DataTable({ name, toggle, headers, rows }: { name: string; toggle: string; headers: string[]; rows: string[][] }) {
+  return (
+    <details className="mt-3 text-xs text-ink-2">
+      <summary className="cursor-pointer select-none">{toggle}</summary>
+      <div className="mt-2 max-h-64 overflow-auto">
+        <table aria-label={name} className="w-full tabular-nums">
+          <thead className="text-left text-ink-2">
+            <tr>
+              {headers.map((h, i) => (
+                <th key={h} scope="col" className={`py-1 pr-2 font-medium ${i ? 'text-right' : ''}`}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r[0]} className="border-t border-line">
+                {r.map((cell, i) => (
+                  <td key={i} className={`py-1 pr-2 ${i ? 'text-right' : ''}`}>
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  )
+}
+
 export function EmptyState({ message }: { message: string }) {
   return (
     <div role="status" className="flex h-48 items-center justify-center rounded-lg border border-dashed border-line px-6 text-center text-sm text-ink-2">
