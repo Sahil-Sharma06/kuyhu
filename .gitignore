@@ -11,3 +11,6 @@ coverage/
 playwright-report/
 test-results/
 .lighthouseci/
+.coverage
+coverage.xml
+htmlcov/

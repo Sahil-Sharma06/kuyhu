@@ -48,17 +48,25 @@ Error grows with lead time, from about 1.8 GW MAE at 0–6h to about 2.4 GW at 4
 │   │   ├── models.py         # Pydantic response schemas
 │   │   ├── api/routes.py     # /api endpoints and input validation
 │   │   ├── data/loader.py    # Loads the bundled CSV snapshot (cached)
+│   │   ├── data/cleaning.py  # Dedup, WIND filter, plausibility flags, gap detection (pure functions)
 │   │   └── services/
 │   │       ├── selection.py  # Cutoff and "latest forecast ≤ cutoff" logic
 │   │       ├── metrics.py    # Error metrics and breakdowns
 │   │       └── decision.py   # Decision-day view and P90 risk buffer
-│   ├── data/                 # actuals.csv, forecasts.csv (cleaned snapshot, UTC)
+│   ├── data/                 # actuals.csv, forecasts.csv (cleaned snapshot, UTC) + quality.json
 │   ├── scripts/
-│   │   ├── fetch_data.py     # Pulls FUELHH + WINDFOR from Elexon, cleans, writes snapshot
-│   │   └── sanity_check.py   # Independent stdlib re-computation vs the API
-│   ├── tests/                # pytest: selection edge cases, metrics, endpoints
-│   └── Dockerfile
+│   │   ├── fetch_data.py     # Pulls FUELHH + WINDFOR from Elexon (chunked, retries), cleans, writes snapshot
+│   │   ├── sanity_check.py   # Independent stdlib re-computation vs the API
+│   │   └── check_core_coverage.sh
+│   ├── tests/
+│   │   ├── unit/             # selection, metrics, cleaning: hand-computed fixtures
+│   │   ├── api/              # TestClient: schemas, validation, CORS, headers, timing
+│   │   └── data/             # snapshot integrity, ingestion (mocked HTTP), opt-in live test
+│   └── Dockerfile            # non-root
 ├── frontend/
+│   ├── e2e/                  # Playwright: flows, a11y (axe), API smoke; 375/768/1440 px
+│   ├── src/**/*.test.tsx     # Vitest + Testing Library + MSW
+│   ├── lighthouserc.cjs, playwright.config.ts, scripts/check-bundle.mjs
 │   ├── src/
 │   │   ├── App.tsx           # Layout, tabs, shared controls (day, range, cutoff)
 │   │   ├── views/            # DecisionView, AccuracyView, Methodology
@@ -68,6 +76,12 @@ Error grows with lead time, from about 1.8 GW MAE at 0–6h to about 2.4 GW at 4
 │   │   ├── series.ts         # Aligns hourly forecasts with half-hourly actuals
 │   │   └── format.ts         # MW / time formatting in Europe/London
 │   ├── nginx.conf, Dockerfile
+├── scripts/
+│   ├── verify_clean_clone.sh # clone → docker compose up → health + non-root checks
+│   ├── smoke_deployed.sh     # every /api route + headers + Playwright against a URL
+│   └── check_submission.sh   # personal-info / README hygiene before submitting
+├── docs/SUBMISSION_CHECKLIST.md
+├── .github/workflows/ci.yml, .pre-commit-config.yaml
 ├── docker-compose.yml
 ├── vercel.json, requirements.txt, .python-version   # Vercel config
 ├── Makefile, .env.example, PLAN.md
@@ -86,7 +100,7 @@ All endpoints are under `/api`. Interactive docs are at `/docs` when running loc
 | `GET /error-by-hour` | `start`, `end`, `cutoff` | MAE/RMSE/bias/P90 per London hour |
 | `GET /error-by-horizon` | `start`, `end` | the same statistics per 6h horizon bucket (all vintages) |
 
-Invalid cutoffs and reversed date ranges return `422`. Dates with no data return `404`.
+Validation is server-side. Malformed dates, malformed cutoffs, dates outside 2026-01-01..2026-01-31 and `start > end` all return **422** with a message naming the offending parameter. A day inside January that has no data returns **200 with an explicit empty result** (empty series, `null` metrics, `n: 0`) rather than 404. Unknown routes return JSON `404`. `/api/meta` reports any missing half-hours in the snapshot (currently none). The API sends CSP, `nosniff` and frame-deny headers, and CORS allows only the origins in `CORS_ORIGINS`.
 
 ## Running it
 
@@ -114,13 +128,32 @@ cd frontend && npm ci && npm run dev
 docker compose up --build   # UI at http://localhost:8080, API at http://localhost:8000
 ```
 
-### Tests, lint and verification
+Both containers run as non-root users. Host ports can be changed with `FRONTEND_PORT` and `BACKEND_PORT`.
+
+### Tests
+
+| Command | What it runs |
+|---|---|
+| `make test` | pytest (unit, API, data) with coverage gates (≥ 70% overall, ≥ 90% on selection/metrics), then vitest, tsc, the production build and the bundle-size budget |
+| `make lint` | ruff check + format, eslint |
+| `make e2e` | Playwright: user flows, axe accessibility (light/dark), API smoke at 375/768/1440 px. Starts uvicorn and `vite preview` itself |
+| `make lighthouse` | Lighthouse CI (needs the backend on :8000): perf ≥ 0.8, a11y ≥ 0.9 |
+| `make audit` | pip-audit + npm audit |
+| `make docker-test` | `scripts/verify_clean_clone.sh`: fresh clone, `docker compose up`, health and non-root checks |
+| `make integration` | the one opt-in test that hits the live Elexon API (skipped by default) |
+| `make sanity` | independent re-computation of the metrics against a running API |
+| `make all` | lint + test + e2e + docker-test |
+
+Without `make` (for example on Windows):
 
 ```bash
-make test     # pytest (32 tests) + vitest
-make lint     # ruff check/format + eslint
-make sanity   # needs the backend running; independent re-computation of the metrics
+cd backend && .venv/Scripts/python -m pytest --cov && bash scripts/check_core_coverage.sh
+cd frontend && npm test && npm run typecheck && npm run lint && npm run build && npx playwright test
 ```
+
+To smoke-test a deployment: `bash scripts/smoke_deployed.sh https://<project>.vercel.app`. The same Playwright suite runs against any URL via `E2E_BASE_URL`.
+
+CI (`.github/workflows/ci.yml`) runs all of the above on every push and PR, plus a gitleaks secret scan. Pre-commit hooks (`pre-commit install`) run ruff, eslint, tsc and gitleaks locally.
 
 ### Refreshing the data
 
@@ -138,7 +171,9 @@ The repo deploys as one Vercel project. The static Vite build is served from `fr
 2. `npm i -g vercel` and run `vercel login`.
 3. From the repo root, run `vercel` and accept the defaults (framework: **Other**; the root directory is the repo root). `vercel.json` provides the install, build and output settings.
 4. `vercel --prod`.
-5. Open `https://<project>.vercel.app/api/health` and the app root, then paste the URL at the top of this README.
+5. Run `bash scripts/smoke_deployed.sh https://<project>.vercel.app`, then paste the URL at the top of this README.
+
+Security headers (CSP, HSTS, nosniff, frame-deny, referrer and permissions policy) are set in `vercel.json` for the static app. The API function sets its own headers.
 
 Alternatively, import the GitHub repo in the Vercel dashboard. No environment variables are needed, because the UI calls the API on the same origin.
 
@@ -160,5 +195,5 @@ Alternatively, import the GitHub repo in the Vercel dashboard. No environment va
 - **One month of history.** Percentiles are seasonal and in-sample for January. A rolling multi-month window, and P90 conditioned on forecast level or horizon, would give better-calibrated buffers.
 - **The large positive bias is not explained yet.** Plausible causes are curtailment, which reduces metered outturn, and coverage differences between WINDFOR and FUELHH. A bias-corrected forecast is an obvious next step.
 - The cutoff is inclusive of a publish at exactly that minute. In practice, data can land a few minutes after its `publishTime`, so a production version should use the actual receipt time.
-- No authentication, caching headers or rate limiting. These are fine for a read-only demo.
+- No authentication or rate limiting. These are fine for a read-only demo over public data.
 - Future work: bias-corrected and quantile forecasts, MWh/£ cost-of-error view, other fuel types, scheduled data refresh.
