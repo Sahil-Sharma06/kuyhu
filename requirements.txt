@@ -1,2 +1,6 @@
-# Installed by Vercel for the Python function in api/; the pins live in backend/.
--r backend/requirements.txt
+# Installed by Vercel for api/index.py. Must match backend/requirements.txt (enforced by tests/unit/test_requirements.py).
+fastapi==0.162.0
+numpy==2.2.6
+pandas==2.2.3
+pydantic==2.14.1
+starlette==1.10.0
