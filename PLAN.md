@@ -10,7 +10,7 @@
 - Latest forecast per target hour = row with max `publishTime <= cutoff` and `startTime - publishTime >= 0`.
 - Evaluation grid = hourly target times (forecast granularity); actual = FUELHH half-hour starting at that time.
 - Error = forecast − actual. Metrics: MAE, RMSE, MAPE (actual>0 only), bias, P50/P90/P95/P99 |err|, MAE % of mean actual. Breakdowns by hour (London), day, horizon bucket.
-- What-if: lower bound = forecast − P90 of (forecast − actual) positive over-forecast errors, i.e. the empirical P90 of error, over the Jan sample for that cutoff.
+- What-if: lower bound = forecast − empirical P90 of signed error (forecast − actual) over the Jan sample for that cutoff, excluding the chosen day.
 
 ## Stages (one commit each)
 1. Scaffold + ingestion script + data snapshot (parquet).
