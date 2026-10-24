@@ -13,7 +13,7 @@
   "rewrites": [{ "source": "/api/(.*)", "destination": "/api/index" }],
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "headers": [
         {
           "key": "Content-Security-Policy",
