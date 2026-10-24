@@ -41,8 +41,9 @@ def test_bad_cutoff_is_422(cutoff: str) -> None:
     assert client.get("/api/forecast-vs-actual", params={"date": "2026-01-15", "cutoff": cutoff}).status_code == 422
 
 
-def test_date_out_of_range_is_404() -> None:
-    assert client.get("/api/forecast-vs-actual", params={"date": "2025-06-01"}).status_code == 404
+def test_date_out_of_range_is_422() -> None:
+    # Spec: dates outside the January 2026 scope are a validation error, not a missing resource.
+    assert client.get("/api/forecast-vs-actual", params={"date": "2025-06-01"}).status_code == 422
 
 
 def test_metrics_shape_and_sanity() -> None:

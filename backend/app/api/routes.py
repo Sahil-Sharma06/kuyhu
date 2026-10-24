@@ -7,40 +7,42 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query
 
+from app.data.cleaning import missing_half_hours
 from app.data.loader import load_actuals, load_forecasts
 from app.models import DecisionDay, GroupStat, HorizonStat, Meta, Metrics
 from app.services import metrics
 from app.services.decision import decision_day
-from app.services.selection import delivery_day_of, parse_cutoff
+from app.services.selection import parse_cutoff
 
 DEFAULT_CUTOFF = "09:30"
+# Delivery days the app is scoped to (January 2026); requests outside it are rejected with 422.
+SCOPE = (date(2026, 1, 1), date(2026, 1, 31))
 
 router = APIRouter(prefix="/api")
 
 CutoffParam = Annotated[str, Query(pattern=r"^\d{1,2}:\d{2}$", description="Decision time on D-1, HH:MM Europe/London")]
 
 
-def data_period() -> tuple[date, date]:
-    """First and last delivery day covered by actuals."""
-    days = delivery_day_of(load_actuals()["start_time"])
-    return days.min(), days.max()
-
-
 def _cutoff(value: str) -> time:
     try:
         return parse_cutoff(value)
     except ValueError as exc:
-        raise HTTPException(422, f"Invalid cutoff '{value}': expected HH:MM") from exc
+        raise HTTPException(422, f"Invalid cutoff '{value}': expected HH:MM between 00:00 and 23:59") from exc
+
+
+def _in_scope(name: str, day: date) -> date:
+    lo, hi = SCOPE
+    if not lo <= day <= hi:
+        raise HTTPException(422, f"{name}={day} is outside the supported delivery period {lo}..{hi}")
+    return day
 
 
 def _period(start: date | None, end: date | None) -> tuple[date, date]:
-    lo, hi = data_period()
-    start, end = start or lo, end or hi
+    start = _in_scope("start", start or SCOPE[0])
+    end = _in_scope("end", end or SCOPE[1])
     if start > end:
-        raise HTTPException(422, "start must be on or before end")
-    if end < lo or start > hi:
-        raise HTTPException(404, f"No data in range; available {lo}..{hi}")
-    return max(start, lo), min(end, hi)
+        raise HTTPException(422, f"start ({start}) must be on or before end ({end})")
+    return start, end
 
 
 @router.get("/health")
@@ -50,7 +52,7 @@ def health() -> dict[str, str]:
 
 @router.get("/meta", response_model=Meta)
 def meta() -> dict:
-    lo, hi = data_period()
+    lo, hi = SCOPE
     return {
         "start": lo.isoformat(),
         "end": hi.isoformat(),
@@ -58,15 +60,14 @@ def meta() -> dict:
         "timezone": "Europe/London",
         "actual_rows": len(load_actuals()),
         "forecast_rows": len(load_forecasts()),
+        "missing_half_hours": [t.isoformat() for t in missing_half_hours(load_actuals()["start_time"], lo, hi)],
     }
 
 
 @router.get("/forecast-vs-actual", response_model=DecisionDay)
 def forecast_vs_actual(date: date, cutoff: CutoffParam = DEFAULT_CUTOFF) -> dict:
-    lo, hi = data_period()
-    if not lo <= date <= hi:
-        raise HTTPException(404, f"No data for {date}; available {lo}..{hi}")
-    return decision_day(load_forecasts(), load_actuals(), date, _cutoff(cutoff), (lo, hi))
+    """Latest pre-cutoff forecast and actual for one day; a day with no data returns empty series."""
+    return decision_day(load_forecasts(), load_actuals(), _in_scope("date", date), _cutoff(cutoff), SCOPE)
 
 
 @router.get("/metrics", response_model=Metrics)

@@ -12,6 +12,7 @@ class Meta(BaseModel):
     timezone: str
     actual_rows: int
     forecast_rows: int
+    missing_half_hours: list[str]
 
 
 class ForecastPoint(BaseModel):
