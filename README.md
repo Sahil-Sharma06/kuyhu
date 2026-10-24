@@ -2,7 +2,7 @@
 
 A web app for a UK utility's day-ahead power procurement team. It shows the **latest national wind generation forecast that was available when the purchase decision had to be made**, and measures **how accurate those forecasts were**, so that buyers can size the extra power to procure beyond wind.
 
-**Live app:** `https://<your-project>.vercel.app` _(placeholder: add after deploying)_
+**Live app:** https://kuyhu-zeta.vercel.app
 
 Scope: national-level wind only, Elexon BMRS data only, delivery days in January 2026.
 
@@ -151,7 +151,7 @@ cd backend && .venv/Scripts/python -m pytest --cov && bash scripts/check_core_co
 cd frontend && npm test && npm run typecheck && npm run lint && npm run build && npx playwright test
 ```
 
-To smoke-test a deployment: `bash scripts/smoke_deployed.sh https://<project>.vercel.app`. The same Playwright suite runs against any URL via `E2E_BASE_URL`.
+To smoke-test a deployment: `bash scripts/smoke_deployed.sh https://kuyhu-zeta.vercel.app`. The same Playwright suite runs against any URL via `E2E_BASE_URL`.
 
 CI (`.github/workflows/ci.yml`) runs all of the above on every push and PR, plus a gitleaks secret scan. Pre-commit hooks (`pre-commit install`) run ruff, eslint, tsc and gitleaks locally.
 
