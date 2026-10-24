@@ -72,7 +72,7 @@ export function DecisionView({ day, cutoff }: { day: string; cutoff: string }) {
                     tick={{ fill: c['--muted'], fontSize: 12 }}
                     minTickGap={24}
                   />
-                  <YAxis tickFormatter={fmtGW} stroke={c['--axis']} tick={{ fill: c['--muted'], fontSize: 12 }} width={48} domain={[0, 'auto']} />
+                  <YAxis tickFormatter={fmtGW} stroke={c['--axis']} tick={{ fill: c['--muted'], fontSize: 12 }} width={60} domain={[0, 'auto']} />
                   <Tooltip
                     content={({ active, payload, label }) =>
                       active && payload?.length ? (

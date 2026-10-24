@@ -35,7 +35,7 @@ function MaeBiasChart({
           <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <CartesianGrid stroke={c['--grid']} vertical={false} />
             <XAxis dataKey="name" {...axisProps(c)} interval="preserveStartEnd" />
-            <YAxis tickFormatter={fmtGW} {...axisProps(c)} width={48} />
+            <YAxis tickFormatter={fmtGW} {...axisProps(c)} width={60} />
             <ReferenceLine y={0} stroke={c['--axis']} />
             <Tooltip
               cursor={{ fill: c['--grid'], opacity: 0.5 }}
@@ -122,7 +122,7 @@ function DailyTrend({ rows, c }: { rows: Metrics['by_day']; c: ChartColors }) {
           <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <CartesianGrid stroke={c['--grid']} vertical={false} />
             <XAxis dataKey="name" {...axisProps(c)} minTickGap={16} />
-            <YAxis tickFormatter={fmtGW} {...axisProps(c)} width={48} domain={[0, 'auto']} />
+            <YAxis tickFormatter={fmtGW} {...axisProps(c)} width={60} domain={[0, 'auto']} />
             <Tooltip
               content={({ active, payload }) =>
                 active && payload?.length ? (
