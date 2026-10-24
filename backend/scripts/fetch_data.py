@@ -8,7 +8,7 @@ Writes backend/data/actuals.csv and backend/data/forecasts.csv (all times UTC, I
 from __future__ import annotations
 
 import argparse
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -52,8 +52,8 @@ def fetch_actuals(start: date, end: date) -> pd.DataFrame:
 
 
 def fetch_forecasts(start: date, end: date) -> pd.DataFrame:
-    t0 = datetime.combine(start - timedelta(days=FORECAST_LOOKBACK_DAYS), datetime.min.time(), tzinfo=timezone.utc)
-    t1 = datetime.combine(end + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
+    t0 = datetime.combine(start - timedelta(days=FORECAST_LOOKBACK_DAYS), datetime.min.time(), tzinfo=UTC)
+    t1 = datetime.combine(end + timedelta(days=1), datetime.min.time(), tzinfo=UTC)
     fmt = "%Y-%m-%dT%H:%M:%SZ"
     rows: list[dict] = []
     for a, b in _chunks(t0, t1):
