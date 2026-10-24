@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { DecisionDay } from '../api'
-import { ChartCard, ErrorBox, Legend, Loading, StatCard, TooltipBox } from '../components/ui'
+import { ChartCard, EmptyState, ErrorBox, Legend, Loading, StatCard, TooltipBox } from '../components/ui'
 import { fmtClock, fmtDateTime, fmtGW, fmtMW, fmtSigned } from '../format'
 import { useApi, useChartColors } from '../hooks'
 import { mergeSeries } from '../series'
@@ -47,6 +47,8 @@ export function DecisionView({ day, cutoff }: { day: string; cutoff: string }) {
       >
         {loading ? (
           <Loading />
+        ) : rows.length === 0 ? (
+          <EmptyState message="No forecast or outturn data is available for this day and cutoff. Try a later decision time or another day." />
         ) : (
           <>
             <Legend

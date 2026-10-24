@@ -7,6 +7,7 @@ export interface Meta {
   timezone: string
   actual_rows: number
   forecast_rows: number
+  missing_half_hours: string[]
 }
 
 export interface ForecastPoint {

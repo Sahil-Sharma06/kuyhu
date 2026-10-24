@@ -1,12 +1,16 @@
 import type { ReactNode } from 'react'
 
-export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-xl border border-line bg-surface p-4 sm:p-5 ${className}`}>{children}</section>
+export function Card({ children, className = '', label }: { children: ReactNode; className?: string; label?: string }) {
+  return (
+    <section aria-label={label} className={`rounded-xl border border-line bg-surface p-4 sm:p-5 ${className}`}>
+      {children}
+    </section>
+  )
 }
 
 export function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <Card>
+    <Card label={label}>
       <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
       <p className="mt-1 text-2xl font-semibold text-ink">{value}</p>
       {hint && <p className="mt-1 text-xs text-ink-2">{hint}</p>}
@@ -32,6 +36,14 @@ export function ErrorBox({ message }: { message: string }) {
   return (
     <div role="alert" className="rounded-lg border border-critical/40 p-4 text-sm text-ink">
       <span className="font-semibold text-critical">⚠ Could not load data.</span> {message}
+    </div>
+  )
+}
+
+export function EmptyState({ message }: { message: string }) {
+  return (
+    <div role="status" className="flex h-48 items-center justify-center rounded-lg border border-dashed border-line px-6 text-center text-sm text-ink-2">
+      {message}
     </div>
   )
 }

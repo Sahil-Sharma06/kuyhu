@@ -39,6 +39,8 @@ export default function App() {
   }, [meta.data])
 
   const bounds = meta.data ? { min: meta.data.start, max: meta.data.end } : {}
+  // Browsers do not enforce min/max on typed input, so reject out-of-range dates here too.
+  const inRange = (v: string) => !!meta.data && v >= meta.data.start && v <= meta.data.end
 
   return (
     <div className="min-h-screen">
@@ -72,7 +74,7 @@ export default function App() {
           <div className="flex flex-wrap gap-3">
             {tab === 'decision' ? (
               <Field label="Delivery day (D)">
-                <input type="date" className={inputCls} value={day} {...bounds} onChange={(e) => e.target.value && setDay(e.target.value)} />
+                <input type="date" className={inputCls} value={day} {...bounds} onChange={(e) => inRange(e.target.value) && setDay(e.target.value)} />
               </Field>
             ) : (
               <>
@@ -82,7 +84,7 @@ export default function App() {
                     className={inputCls}
                     value={range.start}
                     {...bounds}
-                    onChange={(e) => e.target.value && setRange((r) => ({ ...r, start: e.target.value }))}
+                    onChange={(e) => inRange(e.target.value) && setRange((r) => ({ ...r, start: e.target.value }))}
                   />
                 </Field>
                 <Field label="To">
@@ -91,7 +93,7 @@ export default function App() {
                     className={inputCls}
                     value={range.end}
                     {...bounds}
-                    onChange={(e) => e.target.value && setRange((r) => ({ ...r, end: e.target.value }))}
+                    onChange={(e) => inRange(e.target.value) && setRange((r) => ({ ...r, end: e.target.value }))}
                   />
                 </Field>
               </>
