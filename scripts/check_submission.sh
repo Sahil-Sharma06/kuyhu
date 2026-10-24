@@ -24,9 +24,9 @@ fi
 
 echo "== Personal info in tracked files and commit messages"
 if [[ -n "${PERSONAL_PATTERNS:-}" ]]; then
-  hits="$(git grep -I -n -i -E "$PERSONAL_PATTERNS" -- . ':!frontend/package-lock.json' || true)"
+  hits="$(git grep -n -i -E "$PERSONAL_PATTERNS" -- . ':!frontend/package-lock.json' || true)"
   msg_hits="$(git log --all --format='%H %s%n%b' | grep -i -E "$PERSONAL_PATTERNS" || true)"
-  hist_hits="$(git rev-list --all | xargs -I{} git grep -I -l -i -E "$PERSONAL_PATTERNS" {} -- . 2>/dev/null | sort -u || true)"
+  hist_hits="$(git rev-list --all | xargs -I{} git grep -l -i -E "$PERSONAL_PATTERNS" {} -- . 2>/dev/null | sort -u || true)"
   [[ -z "$hits" ]] && ok "no matches in tracked files" || { bad "matches in tracked files:"; echo "$hits" | head -20; }
   [[ -z "$msg_hits" ]] && ok "no matches in commit messages" || { bad "matches in commit messages:"; echo "$msg_hits" | head; }
   [[ -z "$hist_hits" ]] && ok "no matches in any historical file" || { bad "matches in history:"; echo "$hist_hits" | head; }
@@ -37,7 +37,7 @@ emails="$(git grep -I -h -o -E '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' 
 [[ -z "$emails" ]] && ok "no email addresses in tracked files" || { bad "email addresses found:"; echo "$emails"; }
 paths="$(git grep -I -n -E '[A-Za-z]:\\\\Users\\\\|/Users/[A-Za-z]|/home/[a-z]' -- . || true)"
 [[ -z "$paths" ]] && ok "no local home-directory paths" || { bad "local paths found:"; echo "$paths" | head; }
-tracked_junk="$(git ls-files | grep -E '(^|/)(\.coverage|\.env|.*\.pem|.*\.key|node_modules/|\.venv/)' || true)"
+tracked_junk="$(git ls-files | grep -E '(^|/)(\.coverage|\.env|[^/]*\.pem|[^/]*\.key)$|(^|/)(node_modules|\.venv)/' || true)"
 [[ -z "$tracked_junk" ]] && ok "no coverage DBs, env files, keys or dependency dirs tracked" || { bad "should not be tracked:"; echo "$tracked_junk"; }
 
 echo "== README contents"
